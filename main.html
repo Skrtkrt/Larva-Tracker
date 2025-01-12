@@ -129,6 +129,10 @@
             if (!(lat >= 4.6431 && lat <= 21.1205 && lng >= 116.9549 && lng <= 126.5995)) {
                 alert("Selected location is outside the Philippines. Please select a location within the Philippines.");
                 map.removeLayer(result.marker);
+            } else {
+                // Set the marker color to red for search results
+                const marker = L.marker([lat, lng], { icon: L.icon({ iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-red.png', iconSize: [25, 41], iconAnchor: [12, 41] }) }).addTo(map);
+                result.marker = marker;
             }
         });
 
@@ -157,7 +161,7 @@
                 Object.keys(storedPaths).forEach(pathId => {
                     const path = storedPaths[pathId];
                     if (path.marker && path.circle) {
-                        const marker = L.marker(path.marker).addTo(map);
+                        const marker = L.marker(path.marker, { icon: L.icon({ iconUrl: `https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-${path.color}.png`, iconSize: [25, 41], iconAnchor: [12, 41] }) }).addTo(map);
                         const circle = L.circle([path.circle.lat, path.circle.lng], {
                             color: path.color,
                             fillColor: path.color,
@@ -203,7 +207,7 @@
                     map.removeLayer(paths[currentPathId].circle);
                 }
 
-                const marker = L.marker([lat, lng]).addTo(map);
+                const marker = L.marker([lat, lng], { icon: L.icon({ iconUrl: `https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-${paths[currentPathId].color}.png`, iconSize: [25, 41], iconAnchor: [12, 41] }) }).addTo(map);
                 const circle = L.circle([lat, lng], {
                     color: paths[currentPathId].color,
                     fillColor: paths[currentPathId].color,
@@ -259,7 +263,7 @@
                         map.removeLayer(paths[currentPathId].circle);
                     }
 
-                    const marker = L.marker([lat, lng]).addTo(map);
+                    const marker = L.marker([lat, lng], { icon: L.icon({ iconUrl: `https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-${paths[currentPathId].color}.png`, iconSize: [25, 41], iconAnchor: [12, 41] }) }).addTo(map);
                     const circle = L.circle([lat, lng], {
                         color: paths[currentPathId].color,
                         fillColor: paths[currentPathId].color,
