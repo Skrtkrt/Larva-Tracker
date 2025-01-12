@@ -1,1 +1,0 @@
-const map = L.map('map').setView
