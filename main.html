@@ -57,6 +57,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            display: none; /* Initially hidden */
         }
         #map {
             width: 100%;
@@ -81,7 +82,7 @@
                 <button id="path2Button">Path 2</button>
                 <button id="path3Button">Path 3</button>
             </div>
-            <div class="slider-container">
+            <div class="slider-container" id="sliderContainer">
                 <label for="radiusSlider">Adjust Circle Radius: </label>
                 <input type="range" id="radiusSlider" min="1" max="20" value="20">
                 <span id="radiusValue">20 meters</span>
@@ -146,6 +147,7 @@
 
         const slider = document.getElementById("radiusSlider");
         const radiusValue = document.getElementById("radiusValue");
+        const sliderContainer = document.getElementById("sliderContainer");
 
         slider.oninput = function () {
             radiusValue.innerHTML = slider.value + " meters";
@@ -239,6 +241,9 @@
             });
             if (paths[pathId].placingEnabled) {
                 document.getElementById(`path${pathId}Button`).classList.add('active');
+                sliderContainer.style.display = 'flex'; // Show the slider
+            } else {
+                sliderContainer.style.display = 'none'; // Hide the slider
             }
         }
 
