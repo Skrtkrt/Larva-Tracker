@@ -137,9 +137,9 @@
         });
 
         const paths = {
-            1: { color: 'red', circle: null, shaded: false, replaceEnabled: true },
-            2: { color: 'green', circle: null, shaded: false, replaceEnabled: true },
-            3: { color: 'blue', circle: null, shaded: false, replaceEnabled: true }
+            1: { color: 'red', circle: null, shaded: false, replaceEnabled: true, placingEnabled: false },
+            2: { color: 'green', circle: null, shaded: false, replaceEnabled: true, placingEnabled: false },
+            3: { color: 'blue', circle: null, shaded: false, replaceEnabled: true, placingEnabled: false }
         };
 
         let currentPathId = 1;
@@ -199,43 +199,47 @@
             const lng = event.latlng.lng;
 
             if (lat >= 4.6431 && lat <= 21.1205 && lng >= 116.9549 && lng <= 126.5995) {
-                if (paths[currentPathId].replaceEnabled && paths[currentPathId].circle) {
-                    map.removeLayer(paths[currentPathId].circle);
-                }
+                if (paths[currentPathId].placingEnabled) {
+                    if (paths[currentPathId].replaceEnabled && paths[currentPathId].circle) {
+                        map.removeLayer(paths[currentPathId].circle);
+                    }
 
-                if (paths[currentPathId].replaceEnabled) {
-                    const circle = L.circle([lat, lng], {
-                        color: paths[currentPathId].color,
-                        fillColor: paths[currentPathId].color,
-                        fillOpacity: 0.3,
-                        radius: slider.value
-                    }).addTo(map);
+                    if (paths[currentPathId].replaceEnabled) {
+                        const circle = L.circle([lat, lng], {
+                            color: paths[currentPathId].color,
+                            fillColor: paths[currentPathId].color,
+                            fillOpacity: 0.3,
+                            radius: slider.value
+                        }).addTo(map);
 
-                    paths[currentPathId].circle = circle;
+                        paths[currentPathId].circle = circle;
 
-                    savePaths();
+                        savePaths();
+                    }
                 }
             } else {
                 alert("Selected location is outside the Philippines. Please select a location within the Philippines.");
             }
         });
 
-        document.getElementById('path1Button').addEventListener('click', () => toggleReplace(1));
-        document.getElementById('path2Button').addEventListener('click', () => toggleReplace(2));
-        document.getElementById('path3Button').addEventListener('click', () => toggleReplace(3));
+        document.getElementById('path1Button').addEventListener('click', () => togglePlacing(1));
+        document.getElementById('path2Button').addEventListener('click', () => togglePlacing(2));
+        document.getElementById('path3Button').addEventListener('click', () => togglePlacing(3));
 
         document.getElementById('path1Button').addEventListener('dblclick', () => zoomToPath(1));
         document.getElementById('path2Button').addEventListener('dblclick', () => zoomToPath(2));
         document.getElementById('path3Button').addEventListener('dblclick', () => zoomToPath(3));
 
-        function toggleReplace(pathId) {
+        function togglePlacing(pathId) {
             currentPathId = pathId;
-            paths[pathId].replaceEnabled = !paths[pathId].replaceEnabled;
-            // Add active class to the selected button
+            paths[pathId].placingEnabled = !paths[pathId].placingEnabled;
+            // Add active class to the selected button if placing is enabled
             document.querySelectorAll('.path-buttons button').forEach(button => {
                 button.classList.remove('active');
             });
-            document.getElementById(`path${pathId}Button`).classList.add('active');
+            if (paths[pathId].placingEnabled) {
+                document.getElementById(`path${pathId}Button`).classList.add('active');
+            }
         }
 
         function zoomToPath(pathId) {
@@ -255,27 +259,29 @@
                 const lng = data.lng;
 
                 if (lat >= 4.6431 && lat <= 21.1205 && lng >= 116.9549 && lng <= 126.5995) {
-                    if (paths[currentPathId].replaceEnabled && paths[currentPathId].circle) {
-                        map.removeLayer(paths[currentPathId].circle);
-                    }
-
-                    if (paths[currentPathId].replaceEnabled) {
-                        const circle = L.circle([lat, lng], {
-                            color: paths[currentPathId].color,
-                            fillColor: paths[currentPathId].color,
-                            fillOpacity: 0.3,
-                            radius: slider.value
-                        }).addTo(map);
-
-                        paths[currentPathId].circle = circle;
-
-                        // Shade the circle if the robot is within the 20-meter radius
-                        if (!paths[currentPathId].shaded && circle.getBounds().contains([lat, lng])) {
-                            paths[currentPathId].shaded = true;
-                            circle.setStyle({ fillOpacity: 0.5 });
+                    if (paths[currentPathId].placingEnabled) {
+                        if (paths[currentPathId].replaceEnabled && paths[currentPathId].circle) {
+                            map.removeLayer(paths[currentPathId].circle);
                         }
 
-                        savePaths();
+                        if (paths[currentPathId].replaceEnabled) {
+                            const circle = L.circle([lat, lng], {
+                                color: paths[currentPathId].color,
+                                fillColor: paths[currentPathId].color,
+                                fillOpacity: 0.3,
+                                radius: slider.value
+                            }).addTo(map);
+
+                            paths[currentPathId].circle = circle;
+
+                            // Shade the circle if the robot is within the 20-meter radius
+                            if (!paths[currentPathId].shaded && circle.getBounds().contains([lat, lng])) {
+                                paths[currentPathId].shaded = true;
+                                circle.setStyle({ fillOpacity: 0.5 });
+                            }
+
+                            savePaths();
+                        }
                     }
                 }
             }
