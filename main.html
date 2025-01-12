@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Navigation</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch/dist/geosearch.css" />
+    <script src="https://unpkg.com/leaflet-geosearch/dist/geosearch.umd.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+            color: #333;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .path-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .path-buttons button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .path-buttons button:hover {
+            background-color: #0056b3;
+        }
+        .path-buttons button.active {
+            background-color: #004080;
+        }
+        .controls .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #map {
+            width: 100%;
+            height: 600px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        #radiusValue {
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Robot Navigation</h1>
+        </div>
+        <div class="controls">
+            <div class="path-buttons">
+                <button id="path1Button">Path 1</button>
+                <button id="path2Button">Path 2</button>
+                <button id="path3Button">Path 3</button>
+            </div>
+            <div class="slider-container">
+                <label for="radiusSlider">Adjust Circle Radius: </label>
+                <input type="range" id="radiusSlider" min="1" max="20" value="20">
+                <span id="radiusValue">20 meters</span>
+            </div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-geosearch/dist/geosearch.umd.js"></script>
+    <script>
+        // Map and real-time data logic
+        const map = L.map('map', {
+            maxBounds: [
+                [4.6431, 116.9549], // Southwest coordinates of the Philippines
+                [21.1205, 126.5995] // Northeast coordinates of the Philippines
+            ],
+            maxBoundsViscosity: 1.0,
+            minZoom: 6
+        }).setView([12.8797, 121.7740], 6); // Center of the Philippines
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // Add the search control
+        const provider = new GeoSearch.OpenStreetMapProvider();
+        const searchControl = new GeoSearch.GeoSearchControl({
+            provider: provider,
+            style: 'bar',
+            showMarker: true,
+            retainZoomLevel: false,
+            animateZoom: true,
+            autoClose: true,
+            searchLabel: 'Enter address',
+            updateMap: true,
+            keepResult: true
+        });
+
+        // Add the search control to the map
+        map.addControl(searchControl);
+
+        // Filter search results to only show locations within the Philippines
+        map.on('geosearch/showlocation', function(result) {
+            const lat = result.location.y;
+            const lng = result.location.x;
+            if (!(lat >= 4.6431 && lat <= 21.1205 && lng >= 116.9549 && lng <= 126.5995)) {
+                alert("Selected location is outside the Philippines. Please select a location within the Philippines.");
+                map.removeLayer(result.marker);
+            }
+        });
+
+        const paths = {
+            1: { color: 'red', marker: null, circle: null, shaded: false },
+            2: { color: 'green', marker: null, circle: null, shaded: false },
+            3: { color: 'blue', marker: null, circle: null, shaded: false }
+        };
+
+        let currentPathId = 1;
+
+        const slider = document.getElementById("radiusSlider");
+        const radiusValue = document.getElementById("radiusValue");
+
+        slider.oninput = function () {
+            radiusValue.innerHTML = slider.value + " meters";
+            if (paths[currentPathId].circle) {
+                paths[currentPathId].circle.setRadius(slider.value);
+            }
+        };
+
+        // Load paths from local storage
+        function loadPaths() {
+            const storedPaths = JSON.parse(localStorage.getItem('paths'));
+            if (storedPaths) {
+                Object.keys(storedPaths).forEach(pathId => {
+                    const path = storedPaths[pathId];
+                    if (path.marker && path.circle) {
+                        const marker = L.marker(path.marker).addTo(map);
+                        const circle = L.circle([path.circle.lat, path.circle.lng], {
+                            color: path.color,
+                            fillColor: path.color,
+                            fillOpacity: path.shaded ? 0.5 : 0.3,
+                            radius: path.circle.radius
+                        }).addTo(map);
+                        paths[pathId].marker = marker;
+                        paths[pathId].circle = circle;
+                        paths[pathId].shaded = path.shaded;
+                    }
+                });
+            }
+        }
+
+        // Save paths to local storage
+        function savePaths() {
+            const pathsToStore = {};
+            Object.keys(paths).forEach(pathId => {
+                const path = paths[pathId];
+                if (path.marker && path.circle) {
+                    pathsToStore[pathId] = {
+                        color: path.color,
+                        marker: path.marker.getLatLng(),
+                        circle: {
+                            lat: path.circle.getLatLng().lat,
+                            lng: path.circle.getLatLng().lng,
+                            radius: path.circle.getRadius()
+                        },
+                        shaded: path.shaded
+                    };
+                }
+            });
+            localStorage.setItem('paths', JSON.stringify(pathsToStore));
+        }
+
+        map.on('click', function (event) {
+            const lat = event.latlng.lat;
+            const lng = event.latlng.lng;
+
+            if (lat >= 4.6431 && lat <= 21.1205 && lng >= 116.9549 && lng <= 126.5995) {
+                if (paths[currentPathId].marker) {
+                    map.removeLayer(paths[currentPathId].marker);
+                    map.removeLayer(paths[currentPathId].circle);
+                }
+
+                const marker = L.marker([lat, lng]).addTo(map);
+                const circle = L.circle([lat, lng], {
+                    color: paths[currentPathId].color,
+                    fillColor: paths[currentPathId].color,
+                    fillOpacity: 0.3,
+                    radius: slider.value
+                }).addTo(map);
+
+                paths[currentPathId].marker = marker;
+                paths[currentPathId].circle = circle;
+
+                savePaths();
+            } else {
+                alert("Selected location is outside the Philippines. Please select a location within the Philippines.");
+            }
+        });
+
+        document.getElementById('path1Button').addEventListener('click', () => selectPath(1));
+        document.getElementById('path2Button').addEventListener('click', () => selectPath(2));
+        document.getElementById('path3Button').addEventListener('click', () => selectPath(3));
+
+        document.getElementById('path1Button').addEventListener('dblclick', () => zoomToPath(1));
+        document.getElementById('path2Button').addEventListener('dblclick', () => zoomToPath(2));
+        document.getElementById('path3Button').addEventListener('dblclick', () => zoomToPath(3));
+
+        function selectPath(pathId) {
+            currentPathId = pathId;
+            // Add active class to the selected button
+            document.querySelectorAll('.path-buttons button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.getElementById(`path${pathId}Button`).classList.add('active');
+        }
+
+        function zoomToPath(pathId) {
+            if (paths[pathId].marker) {
+                map.setView(paths[pathId].marker.getLatLng(), 18); // Max zoom level 18
+            } else {
+                alert(`No marker set for Path ${pathId}`);
+            }
+        }
+
+        // Mock WebSocket for real-time updates (replace with your backend WebSocket URL)
+        const socket = new WebSocket('ws://localhost:8080');
+        socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'position') {
+                const lat = data.lat;
+                const lng = data.lng;
+
+                if (lat >= 4.6431 && lat <= 21.1205 && lng >= 116.9549 && lng <= 126.5995) {
+                    if (paths[currentPathId].marker) {
+                        map.removeLayer(paths[currentPathId].marker);
+                        map.removeLayer(paths[currentPathId].circle);
+                    }
+
+                    const marker = L.marker([lat, lng]).addTo(map);
+                    const circle = L.circle([lat, lng], {
+                        color: paths[currentPathId].color,
+                        fillColor: paths[currentPathId].color,
+                        fillOpacity: 0.3,
+                        radius: slider.value
+                    }).addTo(map);
+
+                    paths[currentPathId].marker = marker;
+                    paths[currentPathId].circle = circle;
+
+                    // Shade the circle if the robot is within the 20-meter radius
+                    if (!paths[currentPathId].shaded && circle.getBounds().contains([lat, lng])) {
+                        paths[currentPathId].shaded = true;
+                        circle.setStyle({ fillOpacity: 0.5 });
+                    }
+
+                    savePaths();
+                }
+            }
+            if (data.type === 'shadedArea') {
+                L.polygon(data.coordinates, { color: 'green', fillOpacity: 0.5 }).addTo(map);
+            }
+        };
+
+        // Load paths when the page loads
+        loadPaths();
+    </script>
+</body>
+</html>
